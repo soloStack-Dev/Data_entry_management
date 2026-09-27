@@ -168,8 +168,13 @@ docker compose up -d --build
 | --- | --- |
 | Application | <http://localhost:8081> |
 | Health check | <http://localhost:8081/actuator/health> |
-| Database (host) | `127.0.0.1:3306` |
-| Database (in-network) | `mysql:3306` |
+| Database (from the host) | `127.0.0.1:3306` |
+| Database (from the Docker network) | `mysql:3306` |
+
+> If `3306` or `8081` is already taken on your machine, set `DB_HOST_PORT` and
+> `APP_PORT` in `.env` to free ports. On a machine where a local MySQL service
+> occupies `3306`, set `DB_HOST_PORT=3310` — the application picks that up
+> automatically, in Docker and from Maven alike.
 
 Watch the two services come up healthy:
 
@@ -200,33 +205,70 @@ Only the application runs on the host; MySQL stays in Docker.
 ```bash
 docker compose up -d mysql
 cd demo
+./mvnw spring-boot:run            # Windows: .\mvnw.cmd spring-boot:run
 ```
 
-**macOS / Linux**
+That is the whole procedure. **No environment variables need to be set by
+hand** — the application loads the same `.env` file that Docker Compose uses, so
+the database port and the application port already match.
+
+| | Docker Compose | Maven on the host |
+| --- | --- | --- |
+| Start with | `docker compose up -d --build` | `cd demo` → `.\mvnw.cmd spring-boot:run` |
+| Application | <http://localhost:8081> | <http://localhost:8082> |
+| Database (from host) | `localhost:3310` | `localhost:3310` |
+| Database (from app) | `mysql:3306` | `localhost:3310` |
+| Health | <http://localhost:8081/actuator/health> | <http://localhost:8082/actuator/health> |
+
+The two modes use different application ports so that both can run at the same
+time while you switch between them: `APP_PORT` (8081) is published by Compose,
+while `MAVEN_APP_PORT` (8082) is used when the app runs on the host. MySQL is
+always `localhost:3310` from the host in either mode.
+
+### Where the values come from
+
+Highest priority first:
+
+1. **Environment variables** — `DB_HOST`, `DB_PORT`, `SERVER_PORT`, and the rest.
+2. **The `.env` file** — found in the working directory or one level above it.
+3. **The defaults in `application.properties`** — host `localhost`, port `3306`.
+
+Because environment variables win, Docker Compose, CI, and a production
+deployment all keep working unchanged. The `.env` file is only a fallback.
+
+Two names in `.env` are mapped to the names the application reads, so the file
+does not have to duplicate a value in two places:
+
+| `.env` name | Used as |
+| --- | --- |
+| `DB_HOST_PORT` | `DB_PORT` |
+| `MAVEN_APP_PORT` (falling back to `APP_PORT`) | `SERVER_PORT` |
+
+Two switches control the mechanism, if you ever need them:
+
+```properties
+app.dotenv.enabled=false        # ignore .env completely
+app.dotenv.file=/path/to/env    # load a different file
+```
+
+### Overriding for a single run
 
 ```bash
-SERVER_PORT=8080 DB_PORT=3306 ./mvnw spring-boot:run
+SERVER_PORT=9000 DB_PORT=3310 ./mvnw spring-boot:run
 ```
 
-**Windows (PowerShell)**
-
 ```powershell
-$env:SERVER_PORT = "8080"
-$env:DB_PORT     = "3306"
+$env:SERVER_PORT = "9000"
+$env:DB_PORT     = "3310"
 .\mvnw.cmd spring-boot:run
 ```
 
-> ### ⚠️ The application does not read `.env`
->
-> Only Docker Compose reads `.env`. When you start the app from Maven or from a
-> jar, its values are **not** picked up — you must export them yourself. If the
-> host port of MySQL differs from `3306`, `DB_PORT` must match `DB_HOST_PORT`
-> in `.env`, or the application will connect to a different server (or none).
-
 ### Running the packaged jar
 
+The jar reads `.env` in exactly the same way, as long as it is started from the
+repository root or from `demo/`.
+
 ```bash
-cd demo
 ./mvnw clean package -DskipTests
 java -jar target/data-entry-platform-0.0.1-SNAPSHOT.jar
 ```
@@ -234,7 +276,7 @@ java -jar target/data-entry-platform-0.0.1-SNAPSHOT.jar
 The same settings can be passed as JVM system properties:
 
 ```bash
-java -DSERVER_PORT=8080 -DDB_PORT=3306 -jar target/data-entry-platform-0.0.1-SNAPSHOT.jar
+java -DSERVER_PORT=8082 -DDB_PORT=3310 -jar target/data-entry-platform-0.0.1-SNAPSHOT.jar
 ```
 
 Full operator documentation — database GUI setup, `mysqldump` backups, log
@@ -274,12 +316,17 @@ container, and on a VM.
 | `JPA_SHOW_SQL` | `false` | Print every statement |
 | `THYMELEAF_CACHE` | `false` | `true` in the container, where templates are baked in |
 
-### Compose-only (`.env`)
+### `.env` only
+
+These names are for Docker Compose's port publishing, and the application
+derives two of its own settings from them (see
+[Where the values come from](#where-the-values-come-from)).
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `DB_HOST_PORT` | `3306` | Host port published for MySQL |
+| `DB_HOST_PORT` | `3306` | Host port published for MySQL — also used as `DB_PORT` |
 | `APP_PORT` | `8081` | Host port published for the application |
+| `MAVEN_APP_PORT` | `8082` | Application port when running on the host — used as `SERVER_PORT` |
 | `DB_ROOT_PASSWORD` | `rootpassword` | MySQL `root` password inside the container |
 
 ---
@@ -390,13 +437,13 @@ failure.
 ```bash
 docker compose up -d mysql
 cd demo
-DB_PORT=3306 ./mvnw test          # macOS / Linux
-$env:DB_PORT = "3306"; .\mvnw.cmd test    # Windows
+./mvnw test            # Windows: .\mvnw.cmd test
 ```
 
 > The suite loads a real application context, so **MySQL must be running first**.
 > There is no embedded database and no Testcontainers layer — the test asserts
-> that the production wiring actually starts.
+> that the production wiring actually starts. The database port comes from
+> `.env`, so no variable needs to be exported.
 
 ---
 
@@ -416,7 +463,7 @@ Data_entry_management/
     └── src/main/
         ├── java/com/example/dataentry/
         │   ├── DataEntryApplication.java
-        │   ├── config/             # navigation model, startup DB check
+         │   ├── config/             # navigation model, .env loader, startup DB check
         │   ├── controller/         # dashboard, data entry, collection
         │   ├── service/            # business rules, mapping, transactions
         │   ├── repository/         # Spring Data JPA
@@ -436,13 +483,21 @@ Data_entry_management/
 
 ## Troubleshooting
 
-**`Unable to determine Dialect without JDBC metadata`**
+**`Cannot connect to the database.` / `Unable to determine Dialect without JDBC metadata`**
 
-The database was not reachable. The real reason is logged as a `WARN` above the
-stack trace — usually `Access denied` (wrong host or port) or
-`Connection refused` (database not running). A startup check normally intercepts
-this and prints the exact JDBC URL it tried. Check that `DB_PORT` matches
-`DB_HOST_PORT` from `.env`.
+The database was not reachable. A startup check intercepts this and reports the
+exact JDBC URL it tried, the username, and the server's own reason — the URL
+already contains the host and port that were used, so compare that with
+`docker compose ps`:
+
+```text
+JDBC URL : jdbc:mysql://localhost:3310/data_entry_db...
+Reason   : Access denied for user 'datauser'@'localhost'
+```
+
+`Access denied` almost always means the port belongs to a *different* MySQL than
+the one holding `datauser`. Compare against `docker compose ps`; the published
+database port there must match `DB_HOST_PORT` in `.env`.
 
 **`Address already in use` / `port is already allocated`**
 

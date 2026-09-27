@@ -1,0 +1,8 @@
+# Spring Boot discovers custom EnvironmentPostProcessor implementations through
+# META-INF/spring.factories, keyed by the SPI interface. Spring Boot 4 introduced
+# org.springframework.boot.EnvironmentPostProcessor, which is the interface this
+# project implements. (The older org.springframework.boot.env.EnvironmentPostProcessor
+# and its META-INF/spring/*.imports file are the pre-4 registration mechanism and
+# are no longer picked up.)
+org.springframework.boot.EnvironmentPostProcessor=\
+com.example.dataentry.config.DotEnvEnvironmentPostProcessor

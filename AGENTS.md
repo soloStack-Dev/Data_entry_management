@@ -12,11 +12,11 @@
 
 | What | Host port | Why |
 | --- | --- | --- |
-| App (container) | 8081 | 8080 is taken by another container |
-| App (run from Maven/jar) | 8082 | set with `SERVER_PORT` |
-| MySQL (container) | 3310 | 3306 is taken by a **native** `mysqld` service |
+| App (container) | 8081 | `APP_PORT`; 8080 is taken by another container |
+| App (run from Maven/jar) | 8082 | `MAVEN_APP_PORT`, so both modes can run at once |
+| MySQL (container) | 3310 | `DB_HOST_PORT`; 3306 is taken by a **native** `mysqld` service |
 
-Compose defaults stay portable (3306/8080); the local overrides live in `.env`. Inside the network the app uses `mysql:3306`; from the host it needs `DB_PORT=3310`.
+Compose defaults stay portable (3306/8080); the local overrides live in `.env`. Inside the network the app uses `mysql:3306`; from the host it needs `DB_HOST_PORT=3310`, which `.env` now supplies automatically.
 
 ## Commands
 
@@ -40,7 +40,7 @@ docker compose down             # keeps data;  down -v  destroys it
 - Wrapper is `distributionType=only-script` pinned to Maven 3.9.16 - it downloads the distribution on first use (needs network). System Maven 3.9.11 also installed.
 - No lint, formatter, or codegen plugin is configured, so there is no style gate to run.
 - Java and XML use **tabs** (Initializr default). Match it.
-- `./mvnw test` **requires the `mysql` container to be running** - there is no embedded database. Set `DB_PORT=3310` first or it fails on the datasource.
+- `./mvnw test` **requires the `mysql` container to be running** - there is no embedded database. It reads the database port from `.env`, so no variable has to be exported first.
 
 ## Spring Boot 4.1.1 quirks
 
@@ -66,5 +66,9 @@ docker compose down             # keeps data;  down -v  destroys it
 - **HTMX does not swap 4xx/5xx bodies by default.** That is relied upon deliberately: a failed delete must not wipe the table. The friendly message travels in the `X-App-Error` header and `app.js` shows it as a toast.
 - The form `date` field maps to the entity's `entryDate` / column `entry_date`. The conversion lives in exactly two methods in `DataEntryService` (`applyRequest` and `toForm`); do not spread it.
 - **A `@Bean` method name must not equal its `@Configuration` class name.** A `@Configuration` class is itself registered under its decapitalised class name, so `class DataSourceStartupCheck` + `@Bean dataSourceStartupCheck()` collides and fails with "a bean with that name has already been defined". Use a distinct method name.
-- **The app does not read `.env`; only Docker Compose does.** Without `DB_PORT=3310` the default 3306 reaches the *native* `mysqld`, which rejects `datauser`. `DataSourceStartupCheck` (a `BeanPostProcessor`) now validates the DataSource before JPA uses it and reports the URL, username and real reason; that is why the old `Unable to determine Dialect without JDBC metadata` no longer appears.
+- **The app loads the root `.env` itself, via `DotEnvEnvironmentPostProcessor`.** It is registered in `demo/src/main/resources/META-INF/spring.factories` under the **Boot 4** key `org.springframework.boot.EnvironmentPostProcessor`. The older `META-INF/spring/*.imports` file is a no-op on Boot 4 - a processor registered only that way never runs.
+- **That `.env` source is added with `addLast()`, so real environment variables always win.** Do not change it to `addFirst()`: Compose passes `DB_HOST=mysql` / `DB_PORT=3306` to the container, and the Dockerfile sets `SERVER_PORT=8080`. If `.env` outranked those, Docker mode would try to reach `localhost:3310` from inside the app container and break.
+- **Two `.env` names are aliased onto the names the app reads:** `DB_HOST_PORT` -> `DB_PORT`, and `MAVEN_APP_PORT` -> `SERVER_PORT` (falling back to `APP_PORT`). This is why `.env` is not duplicated by hand.
+- **A post-processor runs before logging is initialised, so `log.info` there is silently dropped.** Reporting is done by `DataSourceStartupCheck` instead, which runs with logging up. Keep the post-processor at debug.
+- **`DataSourceStartupCheck` must never log the password.** It reports the JDBC URL, the username, and the driver's own message only.
 - The jar name is `data-entry-platform-0.0.1-SNAPSHOT.jar`. `artifactId` was renamed from `demo`.

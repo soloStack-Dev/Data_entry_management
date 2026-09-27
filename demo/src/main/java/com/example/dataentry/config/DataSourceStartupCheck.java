@@ -76,14 +76,20 @@ public class DataSourceStartupCheck {
 		 */
 		private void verify(DataSource dataSource) {
 			try (Connection connection = dataSource.getConnection()) {
-				log.debug("Database connection verified against {}", connection.getMetaData().getURL());
+				// Logging is fully initialised by now, unlike during environment preparation, so
+				// this is the reliable place to tell the operator which database is in use. The
+				// password is never included.
+				log.info("Connected to {} as {}", connection.getMetaData().getURL(),
+						environment.getProperty("spring.datasource.username", "<not set>"));
 			} catch (SQLException ex) {
 				throw new IllegalStateException(failureMessage(ex), ex);
 			}
 		}
 
 		/**
-		 * Builds the message shown to the operator. The password is deliberately never included.
+		 * Builds the message shown to the operator. The password is deliberately never included, and
+		 * neither is any other value that could be a secret - only the URL, the user name and the
+		 * server's own reply.
 		 */
 		private String failureMessage(SQLException ex) {
 			String url = environment.getProperty("spring.datasource.url", "<not set>");
@@ -96,20 +102,27 @@ public class DataSourceStartupCheck {
 					  Username : %s
 					  Reason   : %s
 
-					The application does not read the .env file - only Docker Compose does. When the app
-					is started from Maven or from a jar, the values from .env must be passed as
-					environment variables explicitly. The host port of the database is the DB_HOST_PORT
-					value in .env, and the host port of the app is the APP_PORT value:
+					Where the settings come from, highest priority first:
 
-					  $env:DB_PORT="<DB_HOST_PORT from .env>"
-					  $env:SERVER_PORT="<APP_PORT from .env>"
-					  .\\mvnw.cmd spring-boot:run
+					  1. Environment variables (DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD)
+					  2. The .env file next to the application or one directory above it
+					  3. The portable defaults in application.properties (host localhost, port 3306)
 
-					Or skip the environment variables entirely and let Compose provide them:
+					The most common cause is a port mismatch. If .env publishes MySQL on
+					DB_HOST_PORT, that value is what the application must use on the host. The URL
+					above already shows the port that was actually tried, so compare it with .env:
+
+					  docker compose ps        shows the published database port
+					  docker compose logs app  shows what the container was given
+
+					Both of these override .env if you need a one-off change:
+
+					  $env:DB_PORT="3310"
+					  $env:SERVER_PORT="8082"
+
+					See RUN_COMMANDS.txt section 6, or start everything through Docker instead:
 
 					  docker compose up -d
-
-					See RUN_COMMANDS.txt section 6 for the full list of settings.
 					""".formatted(url, username, rootReason(ex));
 		}
 

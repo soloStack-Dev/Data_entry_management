@@ -278,60 +278,81 @@
  Useful while developing, because the code reloads without rebuilding an image.
  MySQL still runs in Docker - only the application runs on your machine.
 
- Note on ports: 8080 is already taken on this machine by another container, so
- the steps below set SERVER_PORT=8082 explicitly. Anything that changes the port
- - the application's own port, the database port, or both - is set through an
- environment variable, which application.properties turns into the real setting.
+ No environment variables need to be set by hand. The application reads the
+ same .env file that Docker Compose reads, so the ports below are picked up
+ automatically. See "HOW THE PORTS ARE DECIDED" at the end of this section.
 
- 1. Start just the database:
+  1. Start just the database:
 
         docker compose up -d mysql
 
- 2a. Run from source with Maven. From the demo folder:
+  2a. Run from source with Maven. From the demo folder:
 
         cd demo
-        $env:SERVER_PORT="8082"
-        $env:DB_PORT="3310"
         .\mvnw.cmd spring-boot:run
 
-    Linux / macOS:
+     Linux / macOS:
 
         cd demo
-        SERVER_PORT=8082 DB_PORT=3310 ./mvnw spring-boot:run
+        ./mvnw spring-boot:run
 
- 2b. Or build the jar and run it:
+  2b. Or build the jar and run it:
 
         cd demo
         .\mvnw.cmd clean package -DskipTests
-        $env:SERVER_PORT="8082"
-        $env:DB_PORT="3310"
         java -jar target\data-entry-platform-0.0.1-SNAPSHOT.jar
 
-    The same settings can be passed as JVM system properties instead of
-    environment variables:
+  3. Open http://localhost:8082/ - and in a second terminal, keep the database
+     running as in step 1.
+
+  4. Run the test suite (it also needs the database from step 1):
+
+        cd demo
+        .\mvnw.cmd test
+
+  5. Stop the application with Ctrl+C.
+
+  Overriding a setting for a single run - an environment variable always beats
+  the .env file, so this still works:
+
+        $env:SERVER_PORT="9000"
+        $env:DB_PORT="3310"
+        .\mvnw.cmd spring-boot:run
+
+     or, for the jar, as a JVM system property:
 
         java -DSERVER_PORT=8082 -DDB_HOST=localhost -DDB_PORT=3310 -jar target\data-entry-platform-0.0.1-SNAPSHOT.jar
 
- 3. Open http://localhost:8082/ - and in a second terminal, keep the database
-    running as in step 1.
+  HOW THE PORTS ARE DECIDED
+  ------------------------
+  Three sources are consulted, highest priority first:
 
- 4. Run the test suite (it also needs the database from step 1):
+     1. Environment variables   DB_HOST, DB_PORT, SERVER_PORT, ...
+     2. The .env file          read from the working directory or one level up
+     3. application.properties portable defaults (localhost, 3306, 8080)
 
-        cd demo
-        $env:DB_PORT="3310"
-        .\mvnw.cmd test
+  Two names in .env stand in for names the application reads, so no value is
+  duplicated in the file:
 
- 5. Stop the application with Ctrl+C.
+     DB_HOST_PORT  ->  DB_PORT           (3310 on this machine)
+     MAVEN_APP_PORT -> SERVER_PORT       (8082; falls back to APP_PORT)
+     APP_PORT      -> the published Docker port (8081)
 
- Why the database port is set here but not in Docker: from inside the Compose
- network the application reaches the database as `mysql:3306`, which is what
- docker-compose.yml passes in. From the host, MySQL is only reachable through
- the published port from .env, which is 3310 on this machine.
+  Why the database port differs between modes: inside the Compose network the
+  application reaches the database as `mysql:3306`, which is what docker-compose.yml
+  passes in. From the host, MySQL is only reachable through the published port
+  from .env, which is 3310 on this machine.
 
- If you forget DB_PORT, the application does not connect to the wrong database -
- it fails immediately with a message naming the exact URL it tried, the user it
- used, and the reason. (Without that check, Spring Boot reports the far less
- helpful "Unable to determine Dialect without JDBC metadata".)
+  If the database is unreachable, the application fails immediately with a
+  message naming the exact URL it tried, the user it used, and the reason -
+  never the less helpful "Unable to determine Dialect without JDBC metadata".
+  The password is never printed.
+
+  To ignore .env completely, or to point at a different file:
+
+        $env:APP_DOTENV_ENABLED="false"
+        $env:APP_DOTENV_FILE="/path/to/.env"
+
 
 
 
