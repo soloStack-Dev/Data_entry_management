@@ -19,7 +19,11 @@
     </div>
 
     <!-- Search bar. Typing re-requests fragments/data-table and swaps it into #data-table-wrap,
-         so only the table changes and the input keeps focus (spec 01 section 6). -->
+         so only the table changes and the input keeps focus (spec 01 section 6).
+
+         hx-get goes through th:attr because Thymeleaf does not evaluate an @{...} URL
+         expression in an attribute it does not recognise; written directly it would ship the
+         literal text and the search box would 404. -->
     <div class="card app-card mb-3">
         <div class="card-body">
             <div class="row g-2 align-items-center">
@@ -31,7 +35,7 @@
                                placeholder="Search entries by product or description..."
                                aria-label="Search entries"
                                autocomplete="off"
-                               hx-get="@{/collection/search}"
+                               th:attr="hx-get=@{/collection/search}"
                                hx-trigger="keyup changed delay:300ms, search"
                                hx-target="#data-table-wrap"
                                hx-swap="innerHTML"

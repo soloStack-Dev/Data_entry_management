@@ -192,15 +192,29 @@
 	/* Failed HTMX requests.
 	   HTMX does not swap the body of a 4xx/5xx response, which is exactly what protects the table
 	   and the form from being replaced by an error page. The reason still needs to reach the user,
-	   so the friendly message that GlobalExceptionHandler put in X-App-Error is shown as a toast. */
+	   so the friendly message that GlobalExceptionHandler put in X-App-Error is shown as a toast.
+
+	   A missing header does not mean the server was unreachable: it means the response arrived but
+	   nothing handled it, which is a different fault and is reported with the status code. Claiming
+	   a connectivity problem here sent debugging in the wrong direction once already. */
 	document.body.addEventListener('htmx:responseError', function (event) {
 		var xhr = event.detail && event.detail.xhr;
 		if (!xhr) {
 			return;
 		}
 		var header = xhr.getResponseHeader('X-App-Error');
-		// Network failures have no response at all, so they get a fixed message instead.
-		showToast(header || 'The server could not be reached. Please try again.', 'danger');
+		if (header) {
+			showToast(header, 'danger');
+			return;
+		}
+		showToast('The server rejected the request (HTTP ' + xhr.status + ').', 'danger');
+	});
+
+	/* Genuine connectivity failures. The request got no response at all - the browser refused the
+	   connection or dropped it - so this is the only case where "could not be reached" is accurate.
+	   Without this handler such a failure is silent, because htmx:responseError never fires. */
+	document.body.addEventListener('htmx:sendError', function () {
+		showToast('Could not reach the server. Check that the application is still running, then try again.', 'danger');
 	});
 
 	/* Safety net: if a dialog is open while its markup is replaced, Bootstrap's backdrop would be

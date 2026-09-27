@@ -5,12 +5,19 @@
   fragments/data-table and swaps it into #data-table-wrap, so the search field
   and the scroll position are preserved. The current keyword is carried along in
   every URL, so paging inside a filtered result set keeps the filter.
+
+  hx-get is written through th:attr, because Thymeleaf only evaluates an @{...}
+  URL expression for attributes it knows; on hx-get the expression would be copied
+  out as literal text and the request would 404. Every control also keeps a real
+  th:href pointing at the same page, so paging still works if HTMX is unavailable
+  or fails to load from the CDN.
 -->
 <nav th:fragment="pagination" th:if="${entries.totalPages > 1}" aria-label="Collection pages">
     <ul class="pagination pagination-sm app-pagination mb-0">
         <li class="page-item" th:classappend="${entries.first} ? 'disabled' : ''">
-            <a class="page-link" href="#" aria-label="Previous page"
-               hx-get="@{/collection/search(search=${search},page=${entries.number - 1})}"
+            <a class="page-link" th:href="@{/collection/search(search=${search},page=${entries.number - 1})}"
+               aria-label="Previous page"
+               th:attr="hx-get=@{/collection/search(search=${search},page=${entries.number - 1})}"
                hx-target="#data-table-wrap" hx-swap="innerHTML">
                 <i class="bi bi-chevron-left" aria-hidden="true"></i>
             </a>
@@ -25,8 +32,9 @@
         </li>
 
         <li class="page-item" th:classappend="${entries.last} ? 'disabled' : ''">
-            <a class="page-link" href="#" aria-label="Next page"
-               hx-get="@{/collection/search(search=${search},page=${entries.number + 1})}"
+            <a class="page-link" th:href="@{/collection/search(search=${search},page=${entries.number + 1})}"
+               aria-label="Next page"
+               th:attr="hx-get=@{/collection/search(search=${search},page=${entries.number + 1})}"
                hx-target="#data-table-wrap" hx-swap="innerHTML">
                 <i class="bi bi-chevron-right" aria-hidden="true"></i>
             </a>

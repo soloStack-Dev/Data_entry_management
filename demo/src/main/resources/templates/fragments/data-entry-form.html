@@ -47,11 +47,20 @@
             failed submission come back with the values still filled in and the errors attached.
             hx-disabled-elt disables the submit button while the request is in flight, which is the
             duplicate-submission protection required by spec 03 section 10.
+
+            hx-post must be written through th:attr, never as hx-post="@{...}".
+            Thymeleaf only interprets @{...} as a URL for attributes it knows (th:href, th:action,
+            th:src, ...). On an attribute it does not know, such as hx-post, the value is copied
+            out verbatim, so the page shipped the literal text @{${formAction}} and the browser
+            POSTed to /@{${formAction}}. That is a 404 with no X-App-Error header, which HTMX
+            reports as a response error and app.js turns into the misleading
+            "The server could not be reached" toast. th:attr is the supported way to evaluate a
+            URL expression for a non-standard attribute.
         -->
         <form th:object="${entryForm}"
               th:action="@{${formAction}}"
               method="post"
-              hx-post="@{${formAction}}"
+              th:attr="hx-post=@{${formAction}}"
               hx-target="#entry-form-card"
               hx-swap="outerHTML"
               hx-indicator="#form-spinner"
