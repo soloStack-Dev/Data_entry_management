@@ -1,0 +1,19 @@
+# Files that must never enter the Docker build context.
+# Anything here is either rebuilt inside the image or is a local-only artifact,
+# and copying it would break the cached dependency layer.
+
+target/
+.mvn/wrapper/maven-wrapper.jar
+HELP.md
+
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache

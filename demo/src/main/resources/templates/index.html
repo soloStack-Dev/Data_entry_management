@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: head('Home')}"></head>
+<body class="app-body">
+
+<!-- Shared navigation, identical on every page. -->
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4 py-lg-5">
+
+    <!-- Page heading. -->
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Dashboard</h1>
+            <p class="text-body-secondary mb-0">
+                Overview of everything recorded in the data entry collection.
+            </p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/data-entry}">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Entry
+        </a>
+    </div>
+
+    <!-- Summary cards (spec 01 section 3). Each has an icon, a label, a number and a hint. -->
+    <div class="row g-3 g-lg-4 mb-4">
+
+        <div class="col-12 col-md-4">
+            <div class="card app-card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                            <p class="stat-label mb-1">Total Entries</p>
+                            <!-- Method call rather than property access, because DashboardStats
+                                 is a Java record. -->
+                            <p class="stat-value mb-0" th:text="${stats.totalEntries()}">0</p>
+                        </div>
+                        <span class="icon-tile icon-tile--primary" aria-hidden="true">
+                            <i class="bi bi-collection"></i>
+                        </span>
+                    </div>
+                    <p class="stat-hint mb-0 mt-3">Rows stored in <code>data_entries</code></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card app-card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                            <p class="stat-label mb-1">Today's Entries</p>
+                            <p class="stat-value mb-0" th:text="${stats.todaysEntries()}">0</p>
+                        </div>
+                        <span class="icon-tile icon-tile--success" aria-hidden="true">
+                            <i class="bi bi-calendar-check"></i>
+                        </span>
+                    </div>
+                    <p class="stat-hint mb-0 mt-3">Entries dated today</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card app-card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                            <p class="stat-label mb-1">Recent Entries</p>
+                            <p class="stat-value mb-0" th:text="${#lists.size(stats.recentEntries())}">0</p>
+                        </div>
+                        <span class="icon-tile icon-tile--info" aria-hidden="true">
+                            <i class="bi bi-clock-history"></i>
+                        </span>
+                    </div>
+                    <p class="stat-hint mb-0 mt-3">Five most recently created records</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent records list. -->
+    <div class="card app-card">
+        <div class="card-header app-card-header d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Recent entries</h2>
+            <a class="btn btn-sm btn-outline-secondary" th:href="@{/collection}">
+                View all<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+            </a>
+        </div>
+
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item app-list-item"
+                th:each="entry : ${stats.recentEntries()}">
+                <div class="d-flex justify-content-between align-items-center gap-3">
+                    <div class="min-w-0">
+                        <p class="mb-1 fw-semibold text-truncate" th:text="${entry.productName}">Product</p>
+                        <p class="mb-0 small text-body-secondary text-truncate"
+                           th:text="${entry.description}">Description</p>
+                    </div>
+                    <div class="text-end text-nowrap">
+                        <span class="badge type-badge"
+                              th:classappend="'type-' + ${entry.type.name().toLowerCase()}"
+                              th:text="${entry.type.label}">Purchase</span>
+                        <p class="mb-0 small text-body-secondary mt-1"
+                           th:text="${#temporals.format(entry.entryDate, 'dd MMM yyyy')}">26 Sep 2026</p>
+                    </div>
+                </div>
+            </li>
+
+            <!-- Shown when the database is still empty, so the page never renders a bare list. -->
+            <li class="list-group-item app-list-item" th:if="${#lists.isEmpty(stats.recentEntries())}">
+                <p class="mb-0 text-body-secondary">
+                    Nothing recorded yet.
+                    <a th:href="@{/data-entry}">Create the first entry</a> to get started.
+                </p>
+            </li>
+        </ul>
+    </div>
+</main>
+
+<div th:replace="~{fragments/footer :: scripts}"></div>
+</body>
+</html>

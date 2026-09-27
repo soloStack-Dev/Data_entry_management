@@ -1,0 +1,92 @@
+# Data Entry Management Platform - local stack
+#
+#   docker compose up --build      start MySQL and the application
+#   docker compose down           stop, keep the data
+#   docker compose down -v        stop and DELETE the database volume
+#
+# Host ports can be changed without editing this file, by putting the matching
+# values in a .env file next to it (see .env.example).
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0 - the database from specification 05.
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: data-entry-mysql
+    restart: unless-stopped
+
+    # utf8mb4 is the full Unicode character set; product names and descriptions
+    # can contain any text the operator types.
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+
+    environment:
+      # These four variables are all the MySQL image needs. On first start it
+      # creates the database, the application user and its password.
+      MYSQL_DATABASE: ${DB_NAME:-data_entry_db}
+      MYSQL_USER: ${DB_USERNAME:-datauser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-datapassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+
+    ports:
+      # Published so you can inspect the data with a desktop client
+      # (MySQL Workbench, DBeaver, TablePlus) from the host.
+      # Inside the compose network the application uses `mysql:3306` instead.
+      - "${DB_HOST_PORT:-3306}:3306"
+
+    volumes:
+      # Named volume. Without it the database would be empty again every time
+      # the container is recreated (spec 05 section 9).
+      - mysql_data:/var/lib/mysql
+
+    healthcheck:
+      # mysqladmin ping only answers once the server is accepting connections,
+      # which is the condition the app waits for below.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot application
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      # The Maven module lives in demo/, which also holds the Dockerfile.
+      context: ./demo
+      dockerfile: Dockerfile
+    image: data-entry-platform:latest
+    container_name: data-entry-app
+    restart: unless-stopped
+
+    depends_on:
+      mysql:
+        # Wait for a healthy database, not merely for the container to exist:
+        # MySQL needs a few seconds more to initialise the data directory.
+        condition: service_healthy
+
+    environment:
+      # Inside the compose network the database is reachable by service name.
+      # "localhost" would point back at this container, which is the single most
+      # common Docker networking mistake (spec 05 section 8).
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-data_entry_db}
+      DB_USERNAME: ${DB_USERNAME:-datauser}
+      DB_PASSWORD: ${DB_PASSWORD:-datapassword}
+      # Let Hibernate create/update the data_entries table, and cache templates
+      # because they are baked into the jar.
+      JPA_DDL_AUTO: update
+      THYMELEAF_CACHE: "true"
+      LOG_LEVEL: INFO
+
+    ports:
+      - "${APP_PORT:-8081}:8080"
+
+volumes:
+  mysql_data:
+    name: data-entry-mysql-data

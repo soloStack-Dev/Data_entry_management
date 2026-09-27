@@ -1,0 +1,409 @@
+================================================================================
+ DATA ENTRY MANAGEMENT PLATFORM - RUN COMMANDS
+================================================================================
+ Everything needed to start the application, reach the database and read the
+ data. Sections 1-3 are the daily workflow; sections 4-5 are the reference.
+
+ Ports on this machine:  app  = http://localhost:8081
+                         db   = 127.0.0.1:3310
+                         (3306 is already taken by a native mysqld service, so
+                          the container is published on 3310 - see .env)
+
+
+================================================================================
+ 1. WHAT IS IN THE BOX
+================================================================================
+ data_entry_app/
+ |- demo/                        the Spring Boot application (Maven module)
+ |   |- Dockerfile               multi-stage image build
+ |   |- pom.xml
+ |   |- data_entry_platform_specs/   the 8 specification documents
+ |   `- src/main/
+ |       |- java/com/example/dataentry/   the code
+ |       `- resources/
+ |           |- application.properties    database + app configuration
+ |           |- templates/                Thymeleaf pages and HTMX fragments
+ |           `- static/css|js              custom stylesheet and behaviour
+ |- docker-compose.yml            starts MySQL 8.0 + the application
+ |- .env                         local port and password settings (git-ignored)
+ |- .env.example                 the template to copy if you need to reset it
+ `- RUN_COMMANDS.txt             this file
+
+ Two containers are involved:
+   data-entry-mysql   the database      - image mysql:8.0
+   data-entry-app     the application   - image built from demo/Dockerfile
+ The application waits for the database to report "healthy" before it starts,
+ so the first `up` takes roughly 30-60 seconds.
+
+
+================================================================================
+ 2. QUICK START
+================================================================================
+ All commands are run from the folder that contains docker-compose.yml, i.e.
+ data_entry_app.
+
+ 1. Start Docker Desktop and wait until the whale icon says it is running.
+
+ 2. Build the image and start both containers:
+
+        docker compose up -d --build
+
+ 3. Watch until the application reports "healthy":
+
+        docker compose ps
+
+    Expected output:
+        NAME                STATUS
+        data-entry-app      Up 2 minutes (healthy)
+        data-entry-mysql    Up 3 minutes (healthy)
+
+ 4. Open the application:
+
+        http://localhost:8081
+
+ 5. When you are finished, stop the containers (the data is kept):
+
+        docker compose down
+
+ One command does the lot:
+
+        docker compose up -d --build && docker compose ps
+
+
+================================================================================
+ 3. OPEN THE APPLICATION
+================================================================================
+ Page                            URL
+ -------------------------------  --------------------------------
+ Dashboard                        http://localhost:8081/
+ New / edit form                  http://localhost:8081/data-entry
+ Collection (table, search)       http://localhost:8081/collection
+ Edit one record                  http://localhost:8081/data-entry/edit/1
+ Health check (JSON)              http://localhost:8081/actuator/health
+ Application info (JSON)          http://localhost:8081/actuator/info
+
+ Adding a record: open /data-entry, fill in every field, press "Save Entry".
+ The row is written to MySQL immediately - the table on /collection and the
+ counters on the dashboard update as soon as the page is reloaded.
+
+
+================================================================================
+ 4. ACCESS THE DATABASE AND VIEW THE DATA
+================================================================================
+
+--------------------------------------------------------------------------------
+ 4a. Open a MySQL prompt inside the container (no client install needed)
+--------------------------------------------------------------------------------
+ Windows PowerShell, from the data_entry_app folder:
+
+        docker exec -it data-entry-mysql mysql -u datauser -pdatapassword data_entry_db
+
+ You are now inside a live MySQL shell. Type queries ending in a semicolon and
+ press Enter. Leave with:
+
+        exit;
+
+ The -it flags keep the prompt interactive; -p passes the password inline.
+ The password above is the development default from .env - if you changed it
+ there, use your value instead.
+
+ macOS / Linux equivalent (identical, just not needing a prompt):
+
+        docker exec -it data-entry-mysql mysql -uroot -prootpassword
+
+--------------------------------------------------------------------------------
+ 4b. Useful queries to run at that prompt
+--------------------------------------------------------------------------------
+  Show the tables that exist:
+
+        SHOW TABLES;
+
+  Show the structure of the main table (columns, types, keys):
+
+        DESCRIBE data_entries;
+
+  List every record, newest first:
+
+        SELECT id, product_name, entry_date, type, from_user, to_user
+        FROM data_entries
+        ORDER BY id DESC;
+
+  Same thing, but only the newest 10 rows:
+
+        SELECT * FROM data_entries ORDER BY id DESC LIMIT 10;
+
+  Count the records:
+
+        SELECT COUNT(*) AS total_entries FROM data_entries;
+
+  Records added today (this is what the "Today's Entries" card shows):
+
+        SELECT COUNT(*) AS today
+        FROM data_entries
+        WHERE entry_date = CURDATE();
+
+  Records of one type (PURCHASE, SALE, TRANSFER, RETURN, OTHER):
+
+        SELECT * FROM data_entries WHERE type = 'PURCHASE';
+
+  Search, the same way the collection page does it (case-insensitive):
+
+        SELECT id, product_name, description
+        FROM data_entries
+        WHERE LOWER(product_name) LIKE LOWER('%keyboard%')
+           OR LOWER(description) LIKE LOWER('%keyboard%');
+
+  Count rows per type:
+
+        SELECT type, COUNT(*) AS rows_per_type
+        FROM data_entries
+        GROUP BY type
+        ORDER BY rows_per_type DESC;
+
+  Delete a single record (replace 3 with the id you want):
+
+        DELETE FROM data_entries WHERE id = 3;
+
+  Leave the prompt without saving anything:
+
+        exit;
+
+--------------------------------------------------------------------------------
+ 4c. Run a single query and print the result, without opening a prompt
+--------------------------------------------------------------------------------
+ Handy for checking data from a script or a second terminal. The -e flag runs
+ the query and exits:
+
+        docker exec data-entry-mysql mysql -u datauser -pdatapassword -D data_entry_db -e "SELECT id, product_name, type FROM data_entries ORDER BY id DESC;"
+
+ Count everything, for example:
+
+        docker exec data-entry-mysql mysql -u datauser -pdatapassword -D data_entry_db -e "SELECT COUNT(*) AS total FROM data_entries;"
+
+ Delete every row but keep the table (this empties the application too):
+
+        docker exec data-entry-mysql mysql -u datauser -pdatapassword -D data_entry_db -e "DELETE FROM data_entries;"
+
+--------------------------------------------------------------------------------
+ 4d. Use a desktop database tool instead of the command line
+--------------------------------------------------------------------------------
+ MySQL Workbench, DBeaver, TablePlus, DataGrip and phpMyAdmin all work. Point
+ the tool at the published host port - not at the container name:
+
+     Host            127.0.0.1
+     Port            3310
+     User            datauser
+     Password        datapassword
+     Database        data_entry_db
+
+ Copy those values from .env, which is the single place they are set. In
+ Workbench: new connection -> MySQL -> enter the values above -> Test Connection.
+
+ To browse the container itself from a tool running on another machine, use the
+ container IP instead of 127.0.0.1 and set the port to 3306.
+
+
+================================================================================
+ 5. EVERYDAY COMMANDS
+================================================================================
+ Run these from the data_entry_app folder.
+
+  Show what is running, with health:
+
+        docker compose ps
+
+  Follow the application log (this is where to look when a page breaks):
+
+        docker compose logs -f app
+
+  Follow the database log:
+
+        docker compose logs -f mysql
+
+  Last 100 lines of the application log without following it:
+
+        docker compose logs --tail 100 app
+
+  Rebuild and restart after changing Java, HTML, CSS or JS code:
+
+        docker compose up -d --build
+
+  Restart without rebuilding (picks up a changed .env, for example):
+
+        docker compose restart
+
+  Stop both containers, keep the data:
+
+        docker compose down
+
+  Stop and DELETE the database volume - every record is lost:
+
+        docker compose down -v
+
+  Restart only the database:
+
+        docker compose restart mysql
+
+  Back up the database to backup.sql in the current folder:
+
+        docker exec data-entry-mysql mysqldump -u datauser -pdatapassword data_entry_db > backup.sql
+
+  Restore a backup:
+
+        docker exec -i data-entry-mysql mysql -u datauser -pdatapassword data_entry_db < backup.sql
+
+  Shell inside the running application container:
+
+        docker exec -it data-entry-app sh
+
+  Remove the built image and rebuild it from scratch:
+
+        docker compose down && docker image rm data-entry-platform:latest && docker compose up -d --build
+
+  Delete the local .env so Compose falls back to its built-in defaults:
+
+        Remove-Item .env          (PowerShell)
+
+ -----------------------------------------------------------------------------
+  IMPORTANT: the database lives in the Docker volume "data-entry-mysql-data".
+  `docker compose down` keeps it; `docker compose down -v` destroys it. The
+  volume is why the records survive a restart, a rebuild, or Docker Desktop
+  being closed and reopened.
+ -----------------------------------------------------------------------------
+
+
+================================================================================
+ 6. RUNNING THE APPLICATION WITHOUT DOCKER
+================================================================================
+ Useful while developing, because the code reloads without rebuilding an image.
+ MySQL still runs in Docker - only the application runs on your machine.
+
+ Note on ports: 8080 is already taken on this machine by another container, so
+ the steps below set SERVER_PORT=8082 explicitly. Anything that changes the port
+ - the application's own port, the database port, or both - is set through an
+ environment variable, which application.properties turns into the real setting.
+
+ 1. Start just the database:
+
+        docker compose up -d mysql
+
+ 2a. Run from source with Maven. From the demo folder:
+
+        cd demo
+        $env:SERVER_PORT="8082"
+        $env:DB_PORT="3310"
+        .\mvnw.cmd spring-boot:run
+
+    Linux / macOS:
+
+        cd demo
+        SERVER_PORT=8082 DB_PORT=3310 ./mvnw spring-boot:run
+
+ 2b. Or build the jar and run it:
+
+        cd demo
+        .\mvnw.cmd clean package -DskipTests
+        $env:SERVER_PORT="8082"
+        $env:DB_PORT="3310"
+        java -jar target\data-entry-platform-0.0.1-SNAPSHOT.jar
+
+    The same settings can be passed as JVM system properties instead of
+    environment variables:
+
+        java -DSERVER_PORT=8082 -DDB_HOST=localhost -DDB_PORT=3310 -jar target\data-entry-platform-0.0.1-SNAPSHOT.jar
+
+ 3. Open http://localhost:8082/ - and in a second terminal, keep the database
+    running as in step 1.
+
+ 4. Run the test suite (it also needs the database from step 1):
+
+        cd demo
+        $env:DB_PORT="3310"
+        .\mvnw.cmd test
+
+ 5. Stop the application with Ctrl+C.
+
+ Why the database port is set here but not in Docker: from inside the Compose
+ network the application reaches the database as `mysql:3306`, which is what
+ docker-compose.yml passes in. From the host, MySQL is only reachable through
+ the published port from .env, which is 3310 on this machine.
+
+ If you forget DB_PORT, the application does not connect to the wrong database -
+ it fails immediately with a message naming the exact URL it tried, the user it
+ used, and the reason. (Without that check, Spring Boot reports the far less
+ helpful "Unable to determine Dialect without JDBC metadata".)
+
+
+
+================================================================================
+ 7. TROUBLESHOOTING
+================================================================================
+ "ports are not available ... 3306"
+     Another program already uses 3306 on your machine. Put a different port in
+     .env, for example DB_HOST_PORT=3311, then `docker compose up -d`. Use the
+     new port everywhere in this file where 3310 appears.
+
+ "port is already allocated" for 8081
+     The application is probably already running. Check with `docker compose ps`
+     and restart it with `docker compose restart`, or change APP_PORT in .env.
+
+ The application container keeps restarting
+     MySQL is not ready or the credentials do not match. Read the reason:
+         docker compose logs app
+         docker compose logs mysql
+     The application only starts once MySQL is healthy, so a repeating restart
+     almost always means a database problem, not an application problem.
+
+ The application exits with "Failed to determine a suitable driver class"
+     It started without a database URL, which happens if the environment
+     variables were lost. Start it through Compose, or set DB_HOST, DB_PORT,
+     DB_NAME, DB_USERNAME and DB_PASSWORD yourself.
+
+ The pages load but the table is empty
+     Check the container has the data: `docker compose logs mysql` and look for
+     an error about the volume. Then confirm the app can see the database:
+         curl http://localhost:8081/actuator/health
+     A healthy response is {"status":"UP"}. A "DOWN" status means the app
+     cannot reach the database - check that DB_HOST, DB_USERNAME and DB_PASSWORD
+     agree with .env.
+
+ A port change in .env has no effect
+     `docker compose down` first. Compose reads .env when it creates the
+     containers, not while they are running.
+
+ CSS or JavaScript changes do not appear
+     Inside the container, THYMELEAF_CACHE is true and the assets are baked into
+     the jar, so a rebuild is needed: `docker compose up -d --build`. When
+     running with Maven from section 6, a browser hard refresh (Ctrl+F5) is
+     enough.
+
+ Docker Desktop was closed and the app is gone
+     Containers come back automatically if Docker Desktop is set to start on
+     login. Otherwise run `docker compose up -d` again; the data is still in
+     the volume.
+
+ A record was deleted by accident
+     Restore the most recent backup (section 5). There is no undo for deletes,
+     which is why the delete button asks for confirmation.
+
+
+================================================================================
+ 8. HOW THE PIECES FIT TOGETHER
+================================================================================
+ Browser  --HTMX-->  Spring Boot  -->  MySQL 8.0
+                       (port 8080)    (port 3306)
+
+  * The browser is a normal server-rendered page: Thymeleaf + Bootstrap + HTMX.
+    No JavaScript framework and no JSON API.
+  * Form submission, searching and deleting are partial requests. The server
+    answers with a fragment such as data-table.html, never a whole HTML page.
+  * Every request goes controller -> service -> repository -> MySQL. Controllers
+    never talk to the database.
+  * Validation happens twice: once in the browser for speed, and once on the
+    server because the server is the one that must be right.
+  * The table data_entries is created automatically on first start from the
+    entity definition, so there is no SQL script to run by hand.
+
+ Specifications: the eight documents in demo/data_entry_platform_specs/ are the
+ authoritative description of the intended behaviour. If the code and a spec
+ disagree, the spec is right and the code should be changed.

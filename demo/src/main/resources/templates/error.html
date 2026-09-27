@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Full-page error view, used by GlobalExceptionHandler when the request did not
+  come from HTMX. It shows only the short friendly message the handler produced -
+  never a stack trace, a SQL error or a credential (spec 04 section 10).
+-->
+<head th:replace="~{fragments/header :: head('Something went wrong')}"></head>
+<body class="app-body">
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-5">
+    <div class="card app-card mx-auto text-center error-card">
+        <div class="card-body p-5">
+            <span class="icon-tile icon-tile--danger mb-3" aria-hidden="true">
+                <i class="bi bi-exclamation-triangle"></i>
+            </span>
+            <h1 class="h4 mb-2">
+                Something went wrong
+                <span th:if="${status}" class="text-body-secondary">(status <span th:text="${status}">500</span>)</span>
+            </h1>
+            <!-- message is populated from the exception handler; it is a neutral sentence. -->
+            <p class="text-body-secondary mb-4" th:text="${message} ?: 'Please try again.'">Please try again.</p>
+            <div class="d-flex justify-content-center gap-2">
+                <a class="btn btn-primary" th:href="@{/}">
+                    <i class="bi bi-house-door me-1" aria-hidden="true"></i>Back to dashboard
+                </a>
+                <a class="btn btn-outline-secondary" th:href="@{/collection}">
+                    <i class="bi bi-table me-1" aria-hidden="true"></i>Collection
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/footer :: scripts}"></div>
+</body>
+</html>

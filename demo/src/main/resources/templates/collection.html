@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Collection page (spec 01 sections 5 to 8): search field, result table, edit
+  and delete actions, and the delete confirmation dialog.
+-->
+<head th:replace="~{fragments/header :: head('Collection')}"></head>
+<body class="app-body">
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4 py-lg-5">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Collection</h1>
+            <p class="text-body-secondary mb-0">Search, edit and delete saved entries.</p>
+        </div>
+    </div>
+
+    <!-- Search bar. Typing re-requests fragments/data-table and swaps it into #data-table-wrap,
+         so only the table changes and the input keeps focus (spec 01 section 6). -->
+    <div class="card app-card mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-8 col-lg-9">
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
+                        <input type="search" class="form-control" name="search"
+                               th:value="${search}"
+                               placeholder="Search entries by product or description..."
+                               aria-label="Search entries"
+                               autocomplete="off"
+                               hx-get="@{/collection/search}"
+                               hx-trigger="keyup changed delay:300ms, search"
+                               hx-target="#data-table-wrap"
+                               hx-swap="innerHTML"
+                               hx-indicator="#search-spinner">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 col-lg-3">
+                    <a class="btn btn-primary w-100" th:href="@{/data-entry}">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Entry
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- "Searching..." indicator (spec 02 section 6). -->
+    <div class="mb-3">
+        <span id="search-spinner" class="htmx-indicator app-spinner small text-body-secondary" role="status">
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Searching&hellip;
+        </span>
+    </div>
+
+    <!-- Result table. The fragment's root element carries id="data-table-wrap", which is the
+         element the search box above replaces. -->
+    <div th:replace="~{fragments/data-table :: table}"></div>
+</main>
+
+<!--
+  Delete confirmation (spec 01 section 8).
+  One shared dialog serves the whole table: each row's Delete button carries
+  data-entry-id / data-entry-name, and app.js copies them into this dialog when
+  it opens. The dialog lives here, outside #data-table-wrap, so refreshing the
+  table never destroys an open dialog.
+-->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content app-modal">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="deleteModalLabel">Delete this entry?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    Are you sure you want to delete
+                    <strong id="deleteModalEntry">&hellip;</strong>?
+                    This cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <!-- No hx-delete here: app.js calls htmx.ajax() so the URL is built from the id
+                     captured when the dialog opened. -->
+                <button type="button" class="btn btn-danger" id="deleteConfirmButton">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!--
+  Script footer, included by every full page with
+      <div th:replace="~{fragments/footer :: scripts}"></div>
+
+  The scripts sit at the end of <body> so the DOM is already parsed when HTMX
+  and Bootstrap boot, and their event handlers can attach to existing elements.
+-->
+<th:block th:fragment="scripts">
+    <!-- Bootstrap JavaScript bundle. It contains Popper, which the dropdowns,
+         tooltips and popovers need; nothing in this app uses those, but the
+         bundle is the documented single-file option. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
+
+    <!-- HTMX performs the partial updates: form submit, search, delete. -->
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+
+    <!-- Project behaviour: delete confirmation, duplicate-submit guard, toasts.
+         Deferred so it never blocks the two vendor scripts above. -->
+    <script th:src="@{/js/app.js}" defer></script>
+</th:block>

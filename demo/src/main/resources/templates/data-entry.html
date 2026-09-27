@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Data entry page: serves both "create" and "edit".
+  DataEntryController#showCreateForm and #showEditForm render this template with
+  different form attributes, so there is only one page to maintain.
+-->
+<head th:replace="~{fragments/header :: head('Data Entry')}"></head>
+<body class="app-body">
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4 py-lg-5">
+    <!-- The whole card - including its notifications and the form - is the HTMX swap target. -->
+    <div th:replace="~{fragments/data-entry-form :: form}"></div>
+</main>
+
+<div th:replace="~{fragments/footer :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!--
+  Shared <head> content, included by every full page with
+      <head th:replace="~{fragments/header :: head('Page title')}"></head>
+
+  A <th:block> fragment is used because it contributes attributes only, without
+  introducing an element of its own around them.
+
+  This file deliberately has no <!DOCTYPE html> / <html> wrapper: a fragment is
+  part of a page, never a page itself.
+-->
+<th:block th:fragment="head(pageTitle)">
+    <!-- HTML5 doctype and the viewport meta tag are required by Bootstrap: without them
+         rendering on mobile is wrong. -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Data entry management dashboard">
+
+    <!-- Page title falls back to the application name when a page does not supply one. -->
+    <title th:text="${pageTitle} ?: 'Data Entry Platform'">Data Entry Platform</title>
+
+    <!-- Inter, self-hosted on jsDelivr (spec 02 section 2). Weights match the
+         typography scale: 400 body, 500 labels, 600 buttons/table headers, 700 headings. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/400.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/500.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/600.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.5/700.css">
+
+    <!-- Bootstrap 5.3.8 from the official jsDelivr CDN. The integrity hash and the
+         crossorigin attribute are the ones published by getbootstrap.com; the browser
+         refuses the file if the CDN ever serves something different. -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
+
+    <!-- Bootstrap Icons: the single icon library for the whole app (spec 02 section 3). -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+          rel="stylesheet">
+
+    <!-- Project stylesheet, loaded last so it can override Bootstrap defaults. -->
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</th:block>

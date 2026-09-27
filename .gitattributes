@@ -1,0 +1,36 @@
+# Normalise line endings in the repository and keep the files that must be
+# platform-specific consistent.
+#
+# Without this, a checkout on Windows stores CRLF and pushing that to a Linux
+# build breaks shell scripts and Docker build steps with stray carriage
+# returns. `text=auto` normalises to LF in the index, and the `eol` rules below
+# re-expand only what genuinely needs CRLF.
+
+* text=auto
+
+# --- Must stay LF, because the Linux toolchain parses them verbatim ---------
+*.java        text eol=lf
+*.xml         text eol=lf
+*.properties  text eol=lf
+*.html        text eol=lf
+*.css         text eol=lf
+*.js          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.md          text eol=lf
+*.txt         text eol=lf
+Dockerfile    text eol=lf
+.mvn/wrapper/maven-wrapper.properties text eol=lf
+
+# The shell wrapper is executed by sh, so it must not gain a carriage return.
+/demo/mvnw   text eol=lf
+
+# --- Windows launchers ------------------------------------------------------
+*.cmd         text eol=crlf
+
+# --- Binary -----------------------------------------------------------------
+*.png         binary
+*.jpg         binary
+*.gif         binary
+*.ico         binary
+*.jar         binary

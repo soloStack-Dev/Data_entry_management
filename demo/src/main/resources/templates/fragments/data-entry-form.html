@@ -1,0 +1,170 @@
+<!--
+  The data entry form, used for both creating and editing a record.
+
+  Included in a full page:
+      <div th:replace="~{fragments/data-entry-form :: form}"></div>
+  and returned on its own as the view "fragments/data-entry-form" for every
+  HTMX POST. Both work because this file has exactly one root element and that
+  root element carries the fragment declaration.
+
+  Model attributes, all supplied by DataEntryController#prepareFormModel:
+      entryForm   the DataEntryRequest being bound
+      formAction  the URL to POST to
+      formTitle   heading text
+      submitLabel button text
+      editing     true when an existing record is being changed
+      successMessage / errorMessage  optional notifications
+-->
+<div th:fragment="form" id="entry-form-card" class="card app-card mx-auto form-card"
+     th:classappend="${editing} ? 'form-card--editing' : ''">
+
+    <div class="card-body p-4 p-lg-5">
+
+        <!-- Heading: tells the user whether they are creating or editing. -->
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <span class="icon-tile" aria-hidden="true">
+                <i class="bi" th:classappend="${editing} ? 'bi-pencil-square' : 'bi-plus-square'"></i>
+            </span>
+            <div>
+                <h1 class="h4 mb-0" th:text="${formTitle}">New data entry</h1>
+                <p class="text-body-secondary small mb-0">
+                    All fields are required. Validation runs in the browser and again on the server.
+                </p>
+            </div>
+        </div>
+
+        <!-- Notifications live inside the card so that a successful HTMX post, which replaces
+             this whole block, carries its own confirmation message. -->
+        <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+        <!--
+            th:object binds the form-backing object, which is what makes th:field and th:errors
+            work. th:action uses @{} so the URL is context-path aware, and the same markup serves
+            the create and the edit route.
+
+            hx-post makes HTMX submit the form in the background.
+            hx-swap="outerHTML" replaces this entire card with the response, which is what lets a
+            failed submission come back with the values still filled in and the errors attached.
+            hx-disabled-elt disables the submit button while the request is in flight, which is the
+            duplicate-submission protection required by spec 03 section 10.
+        -->
+        <form th:object="${entryForm}"
+              th:action="@{${formAction}}"
+              method="post"
+              hx-post="@{${formAction}}"
+              hx-target="#entry-form-card"
+              hx-swap="outerHTML"
+              hx-indicator="#form-spinner"
+              hx-disabled-elt="find button[type='submit']"
+              novalidate="false">
+
+            <!-- Business rules that span more than one field (for example "From user and to user
+                 must be different") cannot be attached to a single input, so they are shown once
+                 at the top of the form. #fields.globalErrors() yields the resolved message texts,
+                 not FieldError objects, so each entry is output as-is. -->
+            <div class="alert alert-danger app-alert mb-4" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                <span th:each="err : ${#fields.globalErrors()}" th:text="${err}">Rule violated.</span>
+            </div>
+
+            <div class="row g-3">
+
+                <!-- Product name: full width, the primary field of the record. -->
+                <div class="col-12">
+                    <label for="productName" class="form-label">Product Name</label>
+                    <input type="text" class="form-control" th:field="*{productName}"
+                           placeholder="e.g. Wireless Keyboard" maxlength="150" minlength="2" required>
+                    <!-- th:errors resolves to the message declared on the DTO field, e.g.
+                         "Product name is required." Bootstrap's .invalid-feedback style makes it
+                         appear directly under the input. -->
+                    <div class="invalid-feedback" th:errors="*{productName}"></div>
+                </div>
+
+                <!-- Description: textarea because it is free text up to 2000 characters. -->
+                <div class="col-12">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" th:field="*{description}" rows="3"
+                              placeholder="What happened, and in what quantity?" maxlength="2000"
+                              required></textarea>
+                    <div class="invalid-feedback" th:errors="*{description}"></div>
+                </div>
+
+                <!-- Timing and Date sit side by side on desktop, stacked on mobile
+                     (spec 01 section 4: col-12 / col-md-6). -->
+                <div class="col-12 col-md-6">
+                    <label for="timing" class="form-label">Timing</label>
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-clock"></i></span>
+                        <input type="time" class="form-control" th:field="*{timing}" required>
+                    </div>
+                    <div class="invalid-feedback" th:errors="*{timing}"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label for="date" class="form-label">Date</label>
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-calendar3"></i></span>
+                        <!-- Name is "date" as the form field; the service maps it to the
+                             entryDate / entry_date column. -->
+                        <input type="date" class="form-control" th:field="*{date}" required>
+                    </div>
+                    <div class="invalid-feedback" th:errors="*{date}"></div>
+                </div>
+
+                <!-- Type: a fixed list, so a select is generated from the EntryType enum
+                     (spec 03 section 6). th:field marks the stored value as selected. -->
+                <div class="col-12 col-md-6">
+                    <label for="type" class="form-label">Type</label>
+                    <select class="form-select" th:field="*{type}" required>
+                        <option value="">Select type</option>
+                        <option th:each="option : ${T(com.example.dataentry.entity.EntryType).values()}"
+                                th:value="${option.name()}"
+                                th:text="${option.label}">Purchase</option>
+                    </select>
+                    <div class="invalid-feedback" th:errors="*{type}"></div>
+                </div>
+
+                <!-- From / To user. -->
+                <div class="col-12 col-md-6">
+                    <label for="fromUser" class="form-label">From User</label>
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-person"></i></span>
+                        <input type="text" class="form-control" th:field="*{fromUser}"
+                               placeholder="e.g. Warehouse A" maxlength="100" required>
+                    </div>
+                    <div class="invalid-feedback" th:errors="*{fromUser}"></div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label for="toUser" class="form-label">To User</label>
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-person-check"></i></span>
+                        <input type="text" class="form-control" th:field="*{toUser}"
+                               placeholder="e.g. Warehouse B" maxlength="100" required>
+                    </div>
+                    <div class="invalid-feedback" th:errors="*{toUser}"></div>
+                </div>
+            </div>
+
+            <!-- Action bar. -->
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-4 pt-2 border-top">
+                <button type="submit" class="btn btn-primary" id="save-button">
+                    <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                    <span th:text="${submitLabel}">Save Entry</span>
+                </button>
+
+                <!-- Only meaningful while editing; back to the list instead of saving. -->
+                <a class="btn btn-outline-secondary" th:if="${editing}" th:href="@{/collection}">
+                    <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel
+                </a>
+
+                <!-- Loading state (spec 02 section 6). htmx-indicator is transparent until HTMX
+                     adds the htmx-request class to the form, then the spinner appears. -->
+                <span id="form-spinner" class="htmx-indicator app-spinner ms-auto" role="status">
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>Saving&hellip;</span>
+                </span>
+            </div>
+        </form>
+    </div>
+</div>

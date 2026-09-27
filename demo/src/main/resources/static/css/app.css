@@ -1,0 +1,527 @@
+/* ==========================================================================
+   Data Entry Platform - project stylesheet
+   Implements the visual rules from specification 02:
+     - Inter with a system-ui fallback stack
+     - white / very light background, rounded cards, subtle borders, moderate shadows
+     - animations limited to 150ms-250ms ease-in-out
+     - light theme only, desktop-first with mobile fallbacks
+   Loaded after Bootstrap so these rules win where the two overlap.
+   ========================================================================== */
+
+/* --- Design tokens --------------------------------------------------------
+   One place to change a colour, a radius or a duration. Every rule below uses
+   these variables, so the whole look can be retuned from this block. */
+:root {
+	--app-font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+	--app-bg: #f6f7fb;
+	--app-surface: #ffffff;
+	--app-border: #e6e8f0;
+	--app-text: #1b1f2a;
+	--app-text-muted: #6b7280;
+
+	--app-primary: #2563eb;
+	--app-primary-dark: #1d4ed8;
+	--app-success: #0f9d58;
+	--app-danger: #dc2626;
+	--app-warning: #d97706;
+	--app-info: #0891b2;
+
+	--app-radius: 12px;
+	--app-radius-sm: 8px;
+
+	/* The two durations below are the only ones used for transitions and
+	   animations, which keeps the app inside the 150-250ms band of spec 02. */
+	--app-fast: 150ms;
+	--app-normal: 200ms;
+	--app-slow: 250ms;
+	--app-ease: ease-in-out;
+
+	--app-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 12px rgba(16, 24, 40, .06);
+	--app-shadow-hover: 0 2px 4px rgba(16, 24, 40, .06), 0 10px 24px rgba(16, 24, 40, .10);
+}
+
+/* --- Base ------------------------------------------------------------------ */
+body.app-body {
+	font-family: var(--app-font-sans);
+	background-color: var(--app-bg);
+	color: var(--app-text);
+	/* Font weights from spec 02 section 2. */
+	font-weight: 400;
+	-webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+code {
+	font-size: .85em;
+	color: var(--app-text-muted);
+}
+
+/* Visible focus for keyboard users on every interactive element (spec 02 section 7). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+	outline: 2px solid var(--app-primary);
+	outline-offset: 2px;
+}
+
+.text-body-secondary {
+	color: var(--app-text-muted) !important;
+}
+
+/* --- Navigation ------------------------------------------------------------ */
+.app-navbar {
+	background-color: var(--app-surface);
+	border-bottom: 1px solid var(--app-border);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+}
+
+.app-navbar .navbar-brand {
+	color: var(--app-text);
+}
+
+.app-navbar .navbar-brand:hover {
+	color: var(--app-primary);
+}
+
+/* Small coloured square that holds the product icon. */
+.brand-mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--app-radius-sm);
+	background-color: var(--app-primary);
+	color: #fff;
+	font-size: 1rem;
+	transition: transform var(--app-normal) var(--app-ease);
+}
+
+.app-navbar .navbar-brand:hover .brand-mark {
+	transform: rotate(-6deg) scale(1.05);
+}
+
+.app-navbar .nav-link {
+	color: var(--app-text-muted);
+	font-weight: 500;
+	border-radius: var(--app-radius-sm);
+	padding-inline: .75rem;
+	transition: color var(--app-fast) var(--app-ease), background-color var(--app-fast) var(--app-ease);
+}
+
+.app-navbar .nav-link:hover {
+	color: var(--app-primary);
+	background-color: rgba(37, 99, 235, .06);
+}
+
+.app-navbar .nav-link.active {
+	color: var(--app-primary);
+	background-color: rgba(37, 99, 235, .10);
+	font-weight: 600;
+}
+
+.app-navbar .nav-cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: .4rem .9rem;
+}
+
+/* --- Cards ----------------------------------------------------------------- */
+.app-card {
+	background-color: var(--app-surface);
+	border: 1px solid var(--app-border);
+	border-radius: var(--app-radius);
+	box-shadow: var(--app-shadow);
+	/* Spec 02 section 1: rounded cards, subtle borders, moderate shadows. */
+	transition: box-shadow var(--app-normal) var(--app-ease), transform var(--app-normal) var(--app-ease);
+}
+
+.app-card:hover {
+	box-shadow: var(--app-shadow-hover);
+}
+
+.app-card-header {
+	background-color: transparent;
+	border-bottom: 1px solid var(--app-border);
+	font-weight: 600;
+	padding: .9rem 1.25rem;
+}
+
+/* The form card is centred and constrained so the inputs are not stretched
+   across a wide monitor. */
+.form-card {
+	max-width: 860px;
+}
+
+.form-card--editing {
+	border-color: rgba(37, 99, 235, .35);
+}
+
+.error-card {
+	max-width: 560px;
+}
+
+/* --- Icon tiles ------------------------------------------------------------ */
+.icon-tile {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	border-radius: var(--app-radius-sm);
+	background-color: rgba(37, 99, 235, .10);
+	color: var(--app-primary);
+	font-size: 1.25rem;
+}
+
+.icon-tile--primary { background-color: rgba(37, 99, 235, .10); color: var(--app-primary); }
+.icon-tile--success { background-color: rgba(15, 157, 88, .12); color: var(--app-success); }
+.icon-tile--info    { background-color: rgba(8, 145, 178, .12); color: var(--app-info); }
+.icon-tile--danger  { background-color: rgba(220, 38, 38, .10); color: var(--app-danger); }
+
+/* --- Dashboard statistics -------------------------------------------------- */
+.stat-card .stat-label {
+	font-size: .8125rem;
+	font-weight: 500;
+	letter-spacing: .02em;
+	text-transform: uppercase;
+	color: var(--app-text-muted);
+}
+
+/* Large, tabular-figure number so several cards line up on the digit grid. */
+.stat-card .stat-value {
+	font-size: 2.25rem;
+	font-weight: 700;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+}
+
+.stat-card .stat-hint {
+	font-size: .8125rem;
+	color: var(--app-text-muted);
+}
+
+.app-list-item {
+	padding: .9rem 1.25rem;
+	background-color: transparent;
+	transition: background-color var(--app-fast) var(--app-ease);
+}
+
+.app-list-item:hover {
+	background-color: rgba(37, 99, 235, .04);
+}
+
+/* Allows a long value to be truncated with ellipsis without breaking the row. */
+.min-w-0 {
+	min-width: 0;
+}
+
+/* --- Forms ----------------------------------------------------------------- */
+.form-label {
+	font-weight: 500;
+	font-size: .875rem;
+	margin-bottom: .35rem;
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+	border-color: var(--app-border);
+	border-radius: var(--app-radius-sm);
+	transition: border-color var(--app-fast) var(--app-ease), box-shadow var(--app-fast) var(--app-ease);
+}
+
+.form-control:focus,
+.form-select:focus {
+	border-color: var(--app-primary);
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+.input-group-text {
+	background-color: #f3f4f8;
+	color: var(--app-text-muted);
+}
+
+.invalid-feedback {
+	font-size: .8125rem;
+}
+
+/* --- Buttons --------------------------------------------------------------- */
+.btn {
+	border-radius: var(--app-radius-sm);
+	font-weight: 600;
+	/* Spec 02 section 5: slight hover transition and a slight active press. */
+	transition: background-color var(--app-fast) var(--app-ease), border-color var(--app-fast) var(--app-ease),
+				color var(--app-fast) var(--app-ease), transform var(--app-fast) var(--app-ease),
+				box-shadow var(--app-fast) var(--app-ease);
+}
+
+.btn:active {
+	transform: translateY(1px);
+}
+
+.btn-primary {
+	background-color: var(--app-primary);
+	border-color: var(--app-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+	background-color: var(--app-primary-dark);
+	border-color: var(--app-primary-dark);
+}
+
+.btn-primary:disabled {
+	/* Shown while HTMX is in flight, so the double-submit guard is visible. */
+	background-color: var(--app-primary);
+	border-color: var(--app-primary);
+	opacity: .65;
+}
+
+.btn-outline-secondary {
+	color: var(--app-text-muted);
+	border-color: var(--app-border);
+}
+
+.btn-outline-secondary:hover {
+	background-color: #f3f4f8;
+	border-color: #d5d8e3;
+	color: var(--app-text);
+}
+
+.btn-outline-danger:hover {
+	background-color: var(--app-danger);
+	border-color: var(--app-danger);
+}
+
+/* --- Table ----------------------------------------------------------------- */
+.app-table {
+	--bs-table-bg: transparent;
+	margin-bottom: 0;
+}
+
+.app-table thead th {
+	background-color: #f9fafc;
+	border-bottom: 1px solid var(--app-border);
+	color: var(--app-text-muted);
+	font-size: .75rem;
+	font-weight: 600;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	padding: .85rem 1rem;
+}
+
+.app-table tbody td,
+.app-table tbody th {
+	padding: .85rem 1rem;
+	border-bottom: 1px solid #f1f2f7;
+	vertical-align: middle;
+}
+
+/* Spec 02 section 5: short fade when HTMX replaces the table content. */
+.app-table tbody tr {
+	transition: background-color var(--app-fast) var(--app-ease);
+}
+
+.app-table tbody tr:hover {
+	background-color: rgba(37, 99, 235, .035);
+}
+
+.app-table tbody tr:last-child td,
+.app-table tbody tr:last-child th {
+	border-bottom: 0;
+}
+
+/* Clamps a long description to two lines. */
+.cell-clamp {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	max-width: 320px;
+}
+
+.app-table-footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: .75rem;
+	background-color: transparent;
+	border-top: 1px solid var(--app-border);
+	padding: .85rem 1.25rem;
+}
+
+/* --- Type badges ----------------------------------------------------------- */
+.type-badge {
+	font-weight: 600;
+	font-size: .75rem;
+	padding: .35em .7em;
+	border-radius: 999px;
+	letter-spacing: .01em;
+}
+
+.type-purchase { background-color: rgba(37, 99, 235, .12); color: #1d4ed8; }
+.type-sale     { background-color: rgba(15, 157, 88, .14); color: #0b7a45; }
+.type-transfer { background-color: rgba(8, 145, 178, .14); color: #0e7490; }
+.type-return   { background-color: rgba(217, 119, 6, .14); color: #b45309; }
+.type-other    { background-color: rgba(107, 114, 128, .14); color: #4b5563; }
+
+/* --- Empty state ----------------------------------------------------------- */
+.empty-state {
+	padding: 3rem 1.5rem;
+	text-align: center;
+}
+
+.empty-state__icon {
+	display: block;
+	font-size: 2.5rem;
+	color: #c9cedb;
+	margin-bottom: .75rem;
+}
+
+/* --- Notifications --------------------------------------------------------- */
+.app-alerts:empty {
+	display: none;
+}
+
+.app-alert {
+	display: flex;
+	align-items: center;
+	border: 1px solid transparent;
+	border-radius: var(--app-radius-sm);
+	font-size: .9375rem;
+	box-shadow: var(--app-shadow);
+	/* Spec 02 section 5: notifications fade in. */
+	animation: app-fade-in var(--app-slow) var(--app-ease) both;
+}
+
+.app-alert.alert-success {
+	background-color: #f0fdf4;
+	border-color: rgba(15, 157, 88, .30);
+	color: #0b7a45;
+}
+
+.app-alert.alert-danger {
+	background-color: #fef2f2;
+	border-color: rgba(220, 38, 38, .30);
+	color: #b91c1c;
+}
+
+/* Fades the alert out before Bootstrap removes it (app.js adds .app-alert--closing). */
+.app-alert--closing {
+	opacity: 0;
+	transform: translateY(-4px);
+	transition: opacity var(--app-slow) var(--app-ease), transform var(--app-slow) var(--app-ease);
+}
+
+@keyframes app-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* --- Modal ----------------------------------------------------------------- */
+.app-modal {
+	border: 1px solid var(--app-border);
+	border-radius: var(--app-radius);
+	box-shadow: 0 20px 40px rgba(16, 24, 40, .18);
+}
+
+/* --- Pagination ------------------------------------------------------------ */
+.app-pagination .page-link {
+	color: var(--app-primary);
+	border-color: var(--app-border);
+	transition: background-color var(--app-fast) var(--app-ease), color var(--app-fast) var(--app-ease);
+}
+
+.app-pagination .page-item.active .page-link {
+	background-color: var(--app-primary);
+	border-color: var(--app-primary);
+	color: #fff;
+}
+
+.app-pagination .page-item.disabled .page-link {
+	color: #b6bac7;
+	background-color: transparent;
+}
+
+/* --- HTMX loading indicators ----------------------------------------------- */
+/* HTMX sets .htmx-request on the element that triggered the request while the
+   request is in flight, which is what makes the indicator visible. */
+.htmx-indicator {
+	opacity: 0;
+	transition: opacity var(--app-normal) var(--app-ease);
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+	opacity: 1;
+}
+
+.app-spinner {
+	display: inline-flex;
+	align-items: center;
+	white-space: nowrap;
+}
+
+/* --- Content swap animation ------------------------------------------------ */
+/* Applied by app.js for a moment after a table is swapped in, producing the
+   short fade that spec 02 section 5 asks for on HTMX content. */
+.app-swap-fade {
+	animation: app-fade-in var(--app-slow) var(--app-ease) both;
+}
+
+/* --- Responsive (desktop-first, spec 01 section 9) -------------------------- */
+@media (max-width: 991.98px) {
+	.form-card {
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 767.98px) {
+	.stat-card .stat-value {
+		font-size: 1.875rem;
+	}
+
+	.cell-clamp {
+		max-width: 200px;
+	}
+
+	/* Keep action buttons large enough to tap comfortably. */
+	.app-table .btn {
+		padding: .45rem .7rem;
+	}
+
+	.app-table-footer {
+		justify-content: center;
+	}
+}
+
+/* Respect the OS "reduce motion" setting: this is a data entry tool, so no
+   motion is better than distracting motion. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: .01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: .01ms !important;
+	}
+}

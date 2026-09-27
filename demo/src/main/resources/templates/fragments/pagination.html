@@ -1,0 +1,35 @@
+<!--
+  Pagination controls, included at the foot of the collection table.
+
+  Every control is an HTMX link rather than a normal one: the click re-fetches
+  fragments/data-table and swaps it into #data-table-wrap, so the search field
+  and the scroll position are preserved. The current keyword is carried along in
+  every URL, so paging inside a filtered result set keeps the filter.
+-->
+<nav th:fragment="pagination" th:if="${entries.totalPages > 1}" aria-label="Collection pages">
+    <ul class="pagination pagination-sm app-pagination mb-0">
+        <li class="page-item" th:classappend="${entries.first} ? 'disabled' : ''">
+            <a class="page-link" href="#" aria-label="Previous page"
+               hx-get="@{/collection/search(search=${search},page=${entries.number - 1})}"
+               hx-target="#data-table-wrap" hx-swap="innerHTML">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </a>
+        </li>
+
+        <!-- #numbers.sequence generates the page indices; the active one is marked for styling. -->
+        <li class="page-item" th:each="pageIndex : ${#numbers.sequence(0, entries.totalPages - 1)}"
+            th:classappend="${pageIndex == entries.number} ? 'active' : ''">
+            <a class="page-link" href="#"
+               th:href="@{/collection/search(search=${search},page=${pageIndex})}"
+               th:text="${pageIndex + 1}">1</a>
+        </li>
+
+        <li class="page-item" th:classappend="${entries.last} ? 'disabled' : ''">
+            <a class="page-link" href="#" aria-label="Next page"
+               hx-get="@{/collection/search(search=${search},page=${entries.number + 1})}"
+               hx-target="#data-table-wrap" hx-swap="innerHTML">
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</nav>

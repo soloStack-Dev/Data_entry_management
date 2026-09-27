@@ -1,0 +1,109 @@
+<!--
+  The collection table (spec 01 section 5).
+
+  Included by collection.html inside #data-table-wrap and also returned on its
+  own as the view "fragments/data-table" for the HTMX search and delete
+  endpoints. The root element therefore carries the fragment declaration and the
+  id, which is exactly the element the search box targets.
+
+  Model attributes, all supplied by CollectionController#prepareTableModel:
+      entries   a Page<DataEntry>
+      search    the current keyword, never null
+-->
+<div th:fragment="table" id="data-table-wrap">
+
+    <div class="card app-card">
+        <div class="table-responsive">
+            <table class="table app-table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Timing</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">From</th>
+                    <th scope="col">To</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- One row per record. entries.content is the current slice of the page. -->
+                <tr th:each="entry : ${entries.content}">
+                    <th scope="row" class="fw-semibold" th:text="${entry.productName}">Product</th>
+
+                    <!-- Description is clamped to two lines so a long value cannot break the row
+                         height; the full text stays in the title attribute. -->
+                    <td class="text-body-secondary">
+                        <span class="cell-clamp" th:title="${entry.description}"
+                              th:text="${entry.description}">Description</span>
+                    </td>
+
+                    <td class="text-nowrap" th:text="${#temporals.format(entry.timing, 'HH:mm')}">09:30</td>
+                    <td class="text-nowrap" th:text="${#temporals.format(entry.entryDate, 'dd MMM yyyy')}">26 Sep 2026</td>
+
+                    <!-- Type as a colour-coded badge; the colour comes from the type-* classes. -->
+                    <td>
+                        <span class="badge type-badge"
+                              th:classappend="'type-' + ${entry.type.name().toLowerCase()}"
+                              th:text="${entry.type.label}">Purchase</span>
+                    </td>
+
+                    <td class="text-body-secondary" th:text="${entry.fromUser}">From</td>
+                    <td class="text-body-secondary" th:text="${entry.toUser}">To</td>
+
+                    <td class="text-end text-nowrap">
+                        <div class="btn-group btn-group-sm d-inline-flex" role="group"
+                             th:aria-label="'Actions for ' + ${entry.productName}">
+
+                            <!-- Edit navigates to the pre-filled form. -->
+                            <a class="btn btn-outline-primary"
+                               th:href="@{/data-entry/edit/{id}(id=${entry.id})}"
+                               th:aria-label="'Edit ' + ${entry.productName}">
+                                <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                            </a>
+
+                            <!-- Delete does not delete yet: it opens the shared confirmation
+                                 modal on the page. app.js issues the DELETE request when the
+                                 user confirms, and the endpoint replies with a fresh table. -->
+                            <button type="button" class="btn btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                    th:attr="data-entry-id=${entry.id},data-entry-name=${entry.productName}"
+                                    th:aria-label="'Delete ' + ${entry.productName}">
+                                <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty state (spec 01 section 7). Shown instead of an empty table body. -->
+        <div th:if="${entries.isEmpty()}" class="empty-state">
+            <i class="bi bi-inbox empty-state__icon" aria-hidden="true"></i>
+            <h2 class="h6 mb-1" th:text="${search != '' and !search.isEmpty()} ? 'No entries found' : 'No entries yet'">No entries found</h2>
+            <p class="text-body-secondary mb-3" th:if="${search != '' and !search.isEmpty()}">
+                Nothing matches “<span th:text="${search}">keyword</span>”. Try a different keyword.
+            </p>
+            <p class="text-body-secondary mb-3" th:unless="${search != '' and !search.isEmpty()}">
+                Create your first data entry to see it here.
+            </p>
+            <a class="btn btn-primary" th:href="@{/data-entry}">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Entry
+            </a>
+        </div>
+
+        <!-- Row counter and pagination controls. -->
+        <div class="card-footer app-table-footer" th:unless="${entries.isEmpty()}">
+            <p class="mb-0 small text-body-secondary">
+                Showing <strong th:text="${entries.numberOfElements}">0</strong> of
+                <strong th:text="${entries.totalElements}">0</strong>
+                <span th:if="${search != '' and !search.isEmpty()}">
+                    matching “<span th:text="${search}">keyword</span>”
+                </span>
+            </p>
+            <div th:replace="~{fragments/pagination :: pagination}"></div>
+        </div>
+    </div>
+</div>

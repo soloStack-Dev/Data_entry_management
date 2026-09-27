@@ -1,0 +1,51 @@
+<!--
+  Top navigation bar, identical on every page (spec 00 section 3).
+  Include with:  <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+  currentPath is supplied by NavigationModelAdvice, which reads the request URI.
+  Comparing it here is what marks the active link - no extra attribute is needed
+  on each page.
+-->
+<nav th:fragment="navbar" class="navbar navbar-expand-lg app-navbar sticky-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/}">
+            <i class="bi bi-box-seam brand-mark" aria-hidden="true"></i>
+            <span class="fw-semibold">Data Entry Platform</span>
+        </a>
+
+        <!-- Toggler is what Bootstrap's Collapse plugin binds to on small screens. -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#mainNav" aria-controls="mainNav"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}"
+                       th:classappend="${currentPath == '/'} ? 'active' : ''">
+                        <i class="bi bi-house-door me-1" aria-hidden="true"></i>Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/data-entry}"
+                       th:classappend="${currentPath == '/data-entry'} ? 'active' : ''">
+                        <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Data Entry
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/collection}"
+                       th:classappend="${currentPath == '/collection'} ? 'active' : ''">
+                        <i class="bi bi-table me-1" aria-hidden="true"></i>Collection
+                    </a>
+                </li>
+                <li class="nav-item ms-lg-3">
+                    <a class="btn btn-primary btn-sm nav-cta" th:href="@{/data-entry}">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Entry
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

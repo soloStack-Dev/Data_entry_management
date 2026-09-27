@@ -1,0 +1,4 @@
+# Local secrets and build output. The .env file holds real passwords, so it must
+# never be committed - .env.example is the tracked, password-free template.
+.env
+target/
